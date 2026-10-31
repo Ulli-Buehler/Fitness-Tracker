@@ -70,5 +70,25 @@ $('historyLimit').addEventListener('change',updateHistoryLimit);
 $('add').onclick=()=>{const name=$('newName').value.trim();if(!name)return alert('Name eingeben');data.exercises.push({id:'e'+Date.now(),name,weight:0,unit:$('newUnit').value,reps:8,sets:2,active:true,newExercise:true});$('newName').value='';newSession();manage();draw()};
 $('export').onclick=()=>{const u=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=u;a.download='fitness-backup-'+iso()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)};
 $('import').onclick=()=>$('file').click();$('file').onchange=async ev=>{const f=ev.target.files[0];if(!f)return;try{const v=JSON.parse(await f.text());if(!Array.isArray(v.exercises)||!Array.isArray(v.history))throw Error();if(confirm('Daten durch Backup ersetzen?')){data=v;newSession();draw()}}catch{alert('Ungültiges Backup')}ev.target.value=''};
+
+let swipeStart=null;
+const swipeArea=$('exerciseCard');
+swipeArea.style.touchAction='pan-y';
+swipeArea.addEventListener('touchstart',ev=>{
+ if(ev.touches.length!==1||!$('overlay').classList.contains('hidden'))return;
+ const t=ev.touches[0];swipeStart={x:t.clientX,y:t.clientY};
+},{passive:true});
+swipeArea.addEventListener('touchend',ev=>{
+ if(!swipeStart||!ev.changedTouches.length)return;
+ const t=ev.changedTouches[0],dx=t.clientX-swipeStart.x,dy=t.clientY-swipeStart.y;
+ swipeStart=null;
+ if(Math.abs(dx)<55||Math.abs(dx)<Math.abs(dy)*1.5)return;
+ const a=active(),s=data.session;
+ if(s.finished||!a.length)return;
+ const index=Math.max(0,Math.min(a.length-1,s.index+(dx<0?1:-1)));
+ if(index===s.index)return;
+ s.index=index;save();draw();
+},{passive:true});
+swipeArea.addEventListener('touchcancel',()=>{swipeStart=null});
 draw();
 </script></body></html>
