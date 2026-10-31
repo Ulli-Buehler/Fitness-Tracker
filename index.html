@@ -10,16 +10,35 @@
 </main><div id="overlay" class="overlay hidden"><div class="dialog"><div class="between"><h2>Übungen verwalten</h2><button id="close">Schließen</button></div><div id="manage"></div><h3 style="margin-top:20px">Neue Übung</h3><input id="newName" placeholder="Name der Übung" maxlength="80"><div class="fields"><div><label>Einheit</label><select id="newUnit"><option>kg</option><option>Nm</option></select></div><div><label>Gewicht</label><input id="newWeight" type="number" value="0" min="0"></div></div><button id="add" class="primary">Übung hinzufügen</button></div></div>
 <script>
 const $=id=>document.getElementById(id),KEY='fitness-simple-v2';
-const defaults=[{id:'reverse',name:'Fitness Butterfly Reverse',weight:27,unit:'kg',reps:8,sets:2,active:true},{id:'butterfly',name:'Fitness Butterfly',weight:40,unit:'kg',reps:12,sets:2,active:true},{id:'klimmzug',name:'Fitness Klimmzug',weight:400,unit:'Nm',reps:12,sets:2,active:true}];
+const defaults=[{id:'reverse',name:'Butterfly Reverse',weight:27,unit:'kg',reps:8,sets:2,active:true},{id:'butterfly',name:'Butterfly',weight:40,unit:'kg',reps:12,sets:2,active:true},{id:'klimmzug',name:'Klimmzug',weight:400,unit:'Nm',reps:12,sets:2,active:true}];
 const iso=()=>{const d=new Date;return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const date=x=>x?.split('-').reverse().map((p,i)=>i===2?p.slice(-2):p).join('.')||'';
 const fmt=x=>Number(x).toLocaleString('de-DE',{maximumFractionDigits:2});
 let data;try{data=JSON.parse(localStorage.getItem(KEY))}catch{}if(!data||!Array.isArray(data.exercises)||!Array.isArray(data.history))data={exercises:defaults,history:[],session:null};
-for(const e of data.exercises){if(e.name?.startsWith('Rabel '))e.name='Fitness '+e.name.slice(6);if(e.active==null)e.active=true}
+for(const e of data.exercises){if(/^(Rabel|Fitness) /.test(e.name||''))e.name=e.name.replace(/^(Rabel|Fitness) /,'');if(e.active==null)e.active=true}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch{alert('Speichern fehlgeschlagen')}}
 const active=()=>data.exercises.filter(e=>e.active!==false);
 const next=e=>({sets:e.sets,reps:e.reps>=12?8:e.reps+1,weight:e.weight,needsWeight:e.reps>=12});
 function newSession(){data.session={date:iso(),index:0,finished:!active().length,plan:Object.fromEntries(active().map(e=>[e.id,next(e)]))};save()}
+const initialHistory=[
+['reverse','2026-10-19',3,8,27,'kg'],
+['reverse','2026-10-23',2,8,35,'kg'],
+['reverse','2026-10-26',2,15,15,'kg'],
+['reverse','2026-10-30',2,8,27,'kg'],
+['butterfly','2026-10-16',3,10,35,'kg'],
+['butterfly','2026-10-19',2,12,37,'kg'],
+['butterfly','2026-10-23',2,10,40,'kg'],
+['butterfly','2026-10-26',2,12,40,'kg'],
+['klimmzug','2026-10-16',3,8,360,'Nm'],
+['klimmzug','2026-10-19',3,8,400,'Nm'],
+['klimmzug','2026-10-23',2,10,400,'Nm'],
+['klimmzug','2026-10-26',2,12,400,'Nm']
+];
+for(const [id,day,sets,reps,weight,unit] of initialHistory){
+ if(!data.history.some(h=>h.id===id&&h.date===day)){
+  data.history.push({date:day,id,name:({reverse:'Butterfly Reverse',butterfly:'Butterfly',klimmzug:'Klimmzug'})[id],sets,reps,weight,unit});
+ }
+}
 if(!data.session)newSession();save();
 function ex(){return active()[data.session.index]}
 function plan(){const e=ex();if(!e)return null;return data.session.plan[e.id] ||= next(e)}
