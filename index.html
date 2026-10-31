@@ -64,7 +64,9 @@ const toggle=document.createElement('button');toggle.className='icon-btn';toggle
 const del=document.createElement('button');del.className='icon-btn';del.textContent='🗑';del.title='Löschen';del.setAttribute('aria-label',e.name+' löschen');del.onclick=()=>{if(!confirm('Übung löschen? Der Trainingsverlauf bleibt erhalten.'))return;data.exercises=data.exercises.filter(x=>x.id!==e.id);newSession();manage();draw()};
 actions.append(edit,toggle,del);item.append(b,actions);root.append(item)}}
 $('settings').onclick=()=>{$('historyLimit').value=data.historyLimit;$('overlay').classList.remove('hidden');manage()};$('close').onclick=()=>{$('overlay').classList.add('hidden')};
-$('historyLimit').onchange=()=>{const n=Number($('historyLimit').value);if(!Number.isInteger(n)||n<1||n>100){alert('Bitte eine Zahl von 1 bis 100 eingeben.');$('historyLimit').value=data.historyLimit;return}data.historyLimit=n;save();draw()};
+const updateHistoryLimit=()=>{const n=Number($('historyLimit').value);if(!Number.isInteger(n)||n<1||n>100){alert('Bitte eine Zahl von 1 bis 100 eingeben.');$('historyLimit').value=data.historyLimit;return}data.historyLimit=n;save();draw()};
+$('historyLimit').addEventListener('input',updateHistoryLimit);
+$('historyLimit').addEventListener('change',updateHistoryLimit);
 $('add').onclick=()=>{const name=$('newName').value.trim();if(!name)return alert('Name eingeben');data.exercises.push({id:'e'+Date.now(),name,weight:0,unit:$('newUnit').value,reps:8,sets:2,active:true,newExercise:true});$('newName').value='';newSession();manage();draw()};
 $('export').onclick=()=>{const u=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=u;a.download='fitness-backup-'+iso()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)};
 $('import').onclick=()=>$('file').click();$('file').onchange=async ev=>{const f=ev.target.files[0];if(!f)return;try{const v=JSON.parse(await f.text());if(!Array.isArray(v.exercises)||!Array.isArray(v.history))throw Error();if(confirm('Daten durch Backup ersetzen?')){data=v;newSession();draw()}}catch{alert('Ungültiges Backup')}ev.target.value=''};
