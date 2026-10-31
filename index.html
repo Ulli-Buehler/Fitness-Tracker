@@ -36,7 +36,7 @@ function nextState(e){return {reps:e.reps>=12?8:e.reps+1,needsWeight:e.reps>=12,
 function fresh(){return {exercises:structuredClone(defaults),history:[],session:null}}
 let data;try{data=JSON.parse(localStorage.getItem(KEY)||'null')}catch{};if(!data||!Array.isArray(data.exercises)||!Array.isArray(data.history))data=fresh();
 // Bereits lokal gespeicherte Namen auf dem Gerät ebenfalls anpassen.
-for(const e of data.exercises){if(typeof e.name==='string'&&e.name.startsWith('Rabel '))e.name='Fitness '+e.name.slice(6)}
+let renamed=false;for(const e of data.exercises){if(typeof e.name==='string'&&e.name.startsWith('Rabel ')){e.name='Fitness '+e.name.slice(6);renamed=true}}if(renamed){try{localStorage.setItem(KEY,JSON.stringify(data))}catch{}}
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(data));return true}catch{alert('Speichern nicht möglich. Bitte Speicherplatz prüfen.');return false}}
 function activeExercises(){return data.exercises.filter(e=>e.active!==false)}
 function newSession(){let a=activeExercises();data.session={date:today(),index:0,completed:{},plan:Object.fromEntries(a.map(e=>[e.id,nextState(e)])),finished:!a.length};persist()}
