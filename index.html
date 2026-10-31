@@ -10,7 +10,7 @@
 </main><div id="overlay" class="overlay hidden"><div class="dialog"><div class="between"><h2>Übungen verwalten</h2><button id="close">Schließen</button></div><div id="manage"></div><h3 style="margin-top:20px">Neue Übung</h3><input id="newName" placeholder="Name der Übung" maxlength="80"><div class="fields"><div><label>Einheit</label><select id="newUnit"><option>kg</option><option>Nm</option></select></div><div><label>Gewicht</label><input id="newWeight" type="number" value="0" min="0"></div></div><button id="add" class="primary">Übung hinzufügen</button></div></div>
 <script>
 const $=id=>document.getElementById(id),KEY='fitness-simple-v2';
-const defaults=[{id:'reverse',name:'Butterfly Reverse',weight:27,unit:'kg',reps:8,sets:2,active:true},{id:'butterfly',name:'Butterfly',weight:40,unit:'kg',reps:12,sets:2,active:true},{id:'klimmzug',name:'Klimmzug',weight:400,unit:'Nm',reps:12,sets:2,active:true}];
+const defaults=[{id:'reverse',name:'Butterfly Reverse',weight:27,unit:'kg',reps:8,sets:2,active:true},{id:'butterfly',name:'Butterfly',weight:45,unit:'kg',reps:8,sets:2,active:true},{id:'klimmzug',name:'Klimmzug',weight:440,unit:'Nm',reps:8,sets:2,active:true}];
 const iso=()=>{const d=new Date;return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const date=x=>x?.split('-').reverse().map((p,i)=>i===2?p.slice(-2):p).join('.')||'';
 const fmt=x=>Number(x).toLocaleString('de-DE',{maximumFractionDigits:2});
@@ -29,15 +29,25 @@ const initialHistory=[
 ['butterfly','2026-10-19',2,12,37,'kg'],
 ['butterfly','2026-10-23',2,10,40,'kg'],
 ['butterfly','2026-10-26',2,12,40,'kg'],
+['butterfly','2026-10-30',2,8,45,'kg'],
 ['klimmzug','2026-10-16',3,8,360,'Nm'],
 ['klimmzug','2026-10-19',3,8,400,'Nm'],
 ['klimmzug','2026-10-23',2,10,400,'Nm'],
-['klimmzug','2026-10-26',2,12,400,'Nm']
+['klimmzug','2026-10-26',2,12,400,'Nm'],
+['klimmzug','2026-10-30',2,8,440,'Nm']
 ];
 for(const [id,day,sets,reps,weight,unit] of initialHistory){
  if(!data.history.some(h=>h.id===id&&h.date===day)){
   data.history.push({date:day,id,name:({reverse:'Butterfly Reverse',butterfly:'Butterfly',klimmzug:'Klimmzug'})[id],sets,reps,weight,unit});
  }
+}
+// Nur bisherige Ausgangswerte ergänzen; neuere eigene Trainingswerte nicht überschreiben.
+for(const [id,oldWeight,newWeight,unit] of [['butterfly',40,45,'kg'],['klimmzug',400,440,'Nm']]){
+ const e=data.exercises.find(x=>x.id===id);
+ const newer=data.history.some(h=>h.id===id&&h.date>'2026-10-30');
+ if(e&&!newer&&Number(e.weight)===oldWeight&&e.reps===12){e.weight=newWeight;e.reps=8;e.last='2026-10-30';}
+ const p=data.session?.plan?.[id];
+ if(p&&!newer&&Number(p.weight)===oldWeight&&p.reps===8&&p.needsWeight){p.weight=newWeight;p.needsWeight=false;}
 }
 if(!data.session)newSession();save();
 function ex(){return active()[data.session.index]}
