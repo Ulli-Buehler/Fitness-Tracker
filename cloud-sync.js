@@ -66,7 +66,7 @@
   const {data:{session},error}=await client.auth.getSession();
   if(error)throw error;
   const next=session?.user||null;
-  if(next?.id!==user?.id){user=next;display();if(user)await hydrate();else{ready=false;message('Nur auf diesem Gerät gespeichert')}}
+  if(next?.id!==user?.id){user=next;display();if(user)await hydrate();else{ready=false;window.fitnessCloudLocal();message('Nur auf diesem Gerät gespeichert')}}
  }
  $('cloudSignUp').onclick=async()=>{
   const email=$('cloudEmail').value.trim(),password=$('cloudPassword').value;
@@ -83,7 +83,7 @@
   else await connect();
  };
  $('cloudSignOut').onclick=async()=>{
-  await client.auth.signOut();user=null;ready=false;display();
+  await client.auth.signOut();user=null;ready=false;window.fitnessCloudLocal();display();
   message('Abgemeldet. Lokale Daten bleiben auf diesem Gerät erhalten.');
  };
  $('cloudRetry').onclick=()=>{if(user)hydrate();else connect()};
