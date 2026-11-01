@@ -75,7 +75,7 @@
   const {error}=await client.auth.signUp({email,password,options:{emailRedirectTo:location.origin+location.pathname}});
   message(error?'Fehler: '+error.message:'Registrierung gesendet. Bitte E-Mail bestätigen und anschließend anmelden.');
  };
- $('cloudSignIn').onclick=async()=>{
+ $('cloudLogin').onsubmit=async event=>{event.preventDefault();
   const email=$('cloudEmail').value.trim(),password=$('cloudPassword').value;
   message('Anmeldung läuft …');
   const {error}=await client.auth.signInWithPassword({email,password});
