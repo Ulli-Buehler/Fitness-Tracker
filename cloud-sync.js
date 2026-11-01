@@ -77,9 +77,10 @@
  };
  $('cloudLogin').onsubmit=async event=>{event.preventDefault();
   const email=$('cloudEmail').value.trim(),password=$('cloudPassword').value;
+  if(!email||!password){message('Bitte E-Mail und Passwort eingeben.');return;}
   message('Anmeldung läuft …');
   const {error}=await client.auth.signInWithPassword({email,password});
-  if(error)message('Anmeldung fehlgeschlagen: '+error.message);
+  if(error)message('Anmeldung fehlgeschlagen: '+(error.message==='missing email or phone'?'Bitte E-Mail-Adresse erneut prüfen.':error.message));
   else await connect();
  };
  $('cloudSignOut').onclick=async()=>{
