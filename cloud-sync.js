@@ -86,7 +86,7 @@
  };
  $('cloudSignOut').onclick=async()=>{
   await client.auth.signOut();user=null;ready=false;window.fitnessCloudLocal();display();
-  message('Abgemeldet. Lokale Daten bleiben auf diesem Gerät erhalten.');
+  message('Von der Cloud abgemeldet. Lokale Trainingsdaten bleiben erhalten.');
  };
  client.auth.onAuthStateChange(()=>{setTimeout(()=>connect().catch(e=>message(e.message)),0)});
  window.addEventListener('online',()=>{if(user&&ready)flush()});
