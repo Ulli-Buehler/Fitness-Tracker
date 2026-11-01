@@ -62,7 +62,7 @@
   if(!user||!ready)return;
   clearTimeout(pending);pending=setTimeout(flush,1200);
  }
- window.fitnessCloud={scheduleSave:schedule,isLoggedIn:()=>!!user};
+ window.fitnessCloud={scheduleSave:schedule,isLoggedIn:()=>!!user,refreshSession:async()=>{await connect();return !!user}};
  async function connect(){
   const {data:{session},error}=await client.auth.getSession();
   if(error)throw error;
