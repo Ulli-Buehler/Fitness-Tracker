@@ -15,6 +15,7 @@
   $('cloudLogin').hidden=!!user;
   $('cloudLoggedIn').hidden=!user;
   if(user)account.textContent=user.email||'Angemeldet';
+  window.fitnessAccountRefresh?.();
  }
  async function hydrate(){
   if(!user)return;
@@ -61,7 +62,7 @@
   if(!user||!ready)return;
   clearTimeout(pending);pending=setTimeout(flush,1200);
  }
- window.fitnessCloud={scheduleSave:schedule};
+ window.fitnessCloud={scheduleSave:schedule,isLoggedIn:()=>!!user};
  async function connect(){
   const {data:{session},error}=await client.auth.getSession();
   if(error)throw error;
