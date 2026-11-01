@@ -9,66 +9,100 @@
  const panel=$('cloudPanel'),status=$('cloudStatus'),account=$('cloudAccount');
  if(!panel)return;
  panel.hidden=false;
- let user=null,ready=false,pending=null,saving=false,dirty=false,revision=0;
+ let user=null,ready=false,saving=false,queued=false,retryTimer=null,activeToken=0;
+ const localKey=id=>'fitness-cloud-'+id;
+ const dirtyKey=id=>'fitness-cloud-pending-'+id;
+ const lastSyncKey=id=>'fitness-cloud-last-sync-'+id;
+ const localData=id=>{try{const d=JSON.parse(localStorage.getItem(localKey(id)));return d&&Array.isArray(d.history)&&Array.isArray(d.exercises)?d:null}catch{return null}};
+ const hasPending=id=>localStorage.getItem(dirtyKey(id))==='1';
  function message(s){status.textContent=s}
  function display(){
-  $('cloudLogin').hidden=!!user;
-  $('cloudLoggedIn').hidden=!user;
+  $('cloudLogin').hidden=!!user;$('cloudLoggedIn').hidden=!user;
   if(user)account.textContent=user.email||'Angemeldet';
   window.fitnessAccountRefresh?.();
  }
- async function hydrate(){
+ function queueSave(){
   if(!user)return;
-  ready=false;
-  message('Lade sichere Trainingsdaten …');
-  try{
-   const {data:row,error}=await client.from('fitness_profiles').select('payload').eq('user_id',user.id).maybeSingle();
-   if(error)throw error;
-   if(row?.payload){
-    if(!row.payload.exercises||!Array.isArray(row.payload.history))throw Error('Ungültige Cloud-Daten');
-    // Die Cloud gilt bei Kontoanmeldung als Quelle; vorherigen lokalen Stand sichern.
-    window.fitnessCloudApply(row.payload,user.id);
-    message('Cloud-Daten geladen ✓');
-   }else{
-    const send=confirm('Noch keine Cloud-Daten vorhanden. Vorhandene lokale Trainingsdaten in dieses Konto übernehmen?');
-    if(send){
-     const payload=window.fitnessCloudExport();
-     const {error:upError}=await client.from('fitness_profiles').upsert({user_id:user.id,payload,updated_at:new Date().toISOString()},{onConflict:'user_id'});
-     if(upError)throw upError;
-     window.fitnessCloudApply(payload,user.id);message('Lokale Trainingsdaten erstmals gesichert ✓');
-    }else{
-     // Keine implizite Übernahme anderer lokaler Trainingsdaten.
-     window.fitnessCloudApply({exercises:[],history:[],session:null,historyLimit:5},user.id);
-     message('Neues leeres Profil erstellt');
-    }
-   }
-   ready=true;
-  }catch(e){message('Cloud konnte nicht geladen werden: '+e.message);ready=false}
+  try{localStorage.setItem(dirtyKey(user.id),'1')}catch{}
+  queued=true;
+  message(navigator.onLine?'Änderung gespeichert · Cloud wird aktualisiert …':'Offline · später synchronisieren');
+  clearTimeout(retryTimer);retryTimer=setTimeout(flush,1200);
  }
  async function flush(){
-  if(!user||!ready||saving||!navigator.onLine)return;
-  saving=true;dirty=false;const stamp=revision;
-  message('Speichere online …');
+  if(!user||!ready||saving||!hasPending(user.id)||!navigator.onLine)return;
+  const id=user.id,token=activeToken;
+  saving=true;queued=false;
+  const snapshot=localData(id)||window.fitnessCloudExport();
+  const serialized=JSON.stringify(snapshot);
+  message('Online-Sicherung läuft …');
   try{
-   const payload=window.fitnessCloudExport();
-   const {error}=await client.from('fitness_profiles').upsert({user_id:user.id,payload,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+   const {error}=await client.from('fitness_profiles').upsert({user_id:id,payload:snapshot,updated_at:new Date().toISOString()},{onConflict:'user_id'});
    if(error)throw error;
-   message('Online gesichert ✓');
-  }catch(e){dirty=true;message('Offline/nicht gesichert – lokale Daten bleiben erhalten: '+e.message)}
-  finally{saving=false;if(dirty||stamp!==revision){dirty=false;schedule()}}
+   if(token!==activeToken||user?.id!==id)return;
+   const current=localData(id)||window.fitnessCloudExport();
+   if(JSON.stringify(current)===serialized&&!queued){
+    localStorage.removeItem(dirtyKey(id));
+    localStorage.setItem(lastSyncKey(id),new Date().toISOString());
+    message('Online gesichert ✓');
+   }else{
+    message('Weitere Änderungen werden übertragen …');
+    clearTimeout(retryTimer);retryTimer=setTimeout(flush,500);
+   }
+  }catch(e){
+   if(token===activeToken)message('Lokal gespeichert · Cloud noch nicht erreichbar');
+  }finally{saving=false}
  }
- function schedule(){
-  revision++;
-  if(!user||!ready)return;
-  clearTimeout(pending);pending=setTimeout(flush,1200);
+ window.fitnessCloud={scheduleSave:queueSave,isLoggedIn:()=>!!user,refreshSession:async()=>{await connect();return !!user}};
+ async function hydrate(){
+  if(!user)return;
+  const id=user.id,token=activeToken;
+  ready=false;message('Trainingsdaten werden abgeglichen …');
+  const cached=localData(id);
+  // Lokale, noch nicht übertragene Änderungen haben Vorrang.
+  if(cached&&hasPending(id)){
+   window.fitnessCloudApply(cached,id);
+   ready=true;message('Lokale Änderungen warten auf Online-Sicherung');
+   flush();return;
+  }
+  try{
+   const {data:row,error}=await client.from('fitness_profiles').select('payload').eq('user_id',id).maybeSingle();
+   if(error)throw error;
+   if(token!==activeToken||user?.id!==id)return;
+   if(row?.payload&&Array.isArray(row.payload.exercises)&&Array.isArray(row.payload.history)){
+    window.fitnessCloudApply(row.payload,id);
+    ready=true;message('Online gesichert ✓');return;
+   }
+   if(row?.payload)throw Error('Ungültige Cloud-Daten');
+   const existing=cached||window.fitnessCloudExport();
+   const transfer=confirm('Dieses Konto hat noch keine Online-Daten. Die aktuellen Trainingsdaten jetzt übernehmen?');
+   if(!transfer){
+    window.fitnessCloudApply({exercises:[],history:[],session:null,historyLimit:5},id);
+    ready=true;message('Neues Konto ohne Trainingsdaten');return;
+   }
+   window.fitnessCloudApply(existing,id);
+   ready=true;queueSave();
+  }catch(e){
+   // Auch wenn das Netz ausfällt, bleibt der lokale Kontostand nutzbar.
+   if(token!==activeToken)return;
+   if(cached){window.fitnessCloudApply(cached,id);ready=true;message('Offline · lokaler Stand verfügbar');}
+   else{ready=false;message('Cloud nicht erreichbar · vorhandene lokale Daten bleiben erhalten');}
+  }
  }
- window.fitnessCloud={scheduleSave:schedule,isLoggedIn:()=>!!user,refreshSession:async()=>{await connect();return !!user}};
  async function connect(){
   const {data:{session},error}=await client.auth.getSession();
   if(error)throw error;
   const next=session?.user||null;
-  if(next?.id!==user?.id){user=next;display();if(user)await hydrate();else{ready=false;window.fitnessCloudLocal();message('Nur auf diesem Gerät gespeichert')}}
+  if(next?.id!==user?.id){
+   activeToken++;clearTimeout(retryTimer);
+   user=next;ready=false;display();
+   if(user)await hydrate();
+   else{window.fitnessCloudLocal();message('Nur lokal gespeichert')}
+  }else if(user&&ready&&hasPending(user.id))flush();
  }
+ window.addEventListener('online',()=>{if(user){if(!ready)hydrate();else flush()}});
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&user){if(!ready)hydrate();else flush()}});
+ window.addEventListener('pageshow',()=>{if(user&&ready)flush()});
+ setInterval(()=>{if(user&&ready)flush()},30000);
  $('cloudSignUp').onclick=async()=>{
   const email=$('cloudEmail').value.trim(),password=$('cloudPassword').value;
   if(!email||password.length<8)return message('E-Mail und Passwort mit mindestens 8 Zeichen eingeben.');
@@ -85,10 +119,9 @@
   else await connect();
  };
  $('cloudSignOut').onclick=async()=>{
-  await client.auth.signOut();user=null;ready=false;window.fitnessCloudLocal();display();
+  await client.auth.signOut();activeToken++;user=null;ready=false;window.fitnessCloudLocal();display();
   message('Von der Cloud abgemeldet. Lokale Trainingsdaten bleiben erhalten.');
  };
  client.auth.onAuthStateChange(()=>{setTimeout(()=>connect().catch(e=>message(e.message)),0)});
- window.addEventListener('online',()=>{if(user&&ready)flush()});
  display();connect().catch(e=>message('Cloud-Fehler: '+e.message));
 })();
