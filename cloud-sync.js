@@ -34,7 +34,7 @@
      const payload=window.fitnessCloudExport();
      const {error:upError}=await client.from('fitness_profiles').upsert({user_id:user.id,payload,updated_at:new Date().toISOString()},{onConflict:'user_id'});
      if(upError)throw upError;
-     message('Lokale Trainingsdaten erstmals gesichert ✓');
+     window.fitnessCloudApply(payload,user.id);message('Lokale Trainingsdaten erstmals gesichert ✓');
     }else{
      // Keine implizite Übernahme anderer lokaler Trainingsdaten.
      window.fitnessCloudApply({exercises:[],history:[],session:null,historyLimit:5},user.id);
@@ -82,6 +82,22 @@
   const {error}=await client.auth.signInWithPassword({email,password});
   if(error)message('Anmeldung fehlgeschlagen: '+(error.message==='missing email or phone'?'Bitte E-Mail-Adresse erneut prüfen.':error.message));
   else await connect();
+ };
+ $('cloudImportLocal').onclick=async()=>{
+  if(!user)return message('Bitte zuerst anmelden.');
+  let old;try{old=JSON.parse(localStorage.getItem('fitness-simple-v2'))}catch{}
+  if(!old||!Array.isArray(old.exercises)||!Array.isArray(old.history))return message('Auf diesem Gerät wurden keine früheren lokalen Trainingsdaten gefunden.');
+  const current=window.fitnessCloudExport();
+  const localCount=old.history.length;
+  if(!confirm('Lokale Trainingsdaten gefunden: '+old.exercises.length+' Übungen, '+localCount+' Einträge. Diese Daten ins Online-Konto übernehmen? Der bisherige Online-Stand wird vorher auf diesem Gerät gesichert.'))return;
+  message('Übertrage frühere Trainingsdaten …');
+  try{
+   localStorage.setItem('fitness-cloud-before-import-'+user.id+'-'+Date.now(),JSON.stringify(current));
+   const {error}=await client.from('fitness_profiles').upsert({user_id:user.id,payload:old,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+   if(error)throw error;
+   window.fitnessCloudApply(old,user.id);
+   ready=true;message('Frühere Trainingsdaten online übernommen ✓ ('+localCount+' Einträge)');
+  }catch(e){message('Übernahme fehlgeschlagen: '+e.message)}
  };
  $('cloudSignOut').onclick=async()=>{
   await client.auth.signOut();user=null;ready=false;window.fitnessCloudLocal();display();
