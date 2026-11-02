@@ -70,6 +70,7 @@
    if(token!==activeToken||user?.id!==id)return;
    if(row?.payload&&Array.isArray(row.payload.exercises)&&Array.isArray(row.payload.history)){
     window.fitnessCloudApply(row.payload,id);
+    if(!row.payload.profile?.firstName&&user.user_metadata?.display_name)window.fitnessSetProfileName(user.user_metadata.display_name);
     ready=true;message('Online gesichert ✓');return;
    }
    if(row?.payload)throw Error('Ungültige Cloud-Daten');
@@ -80,6 +81,7 @@
     ready=true;message('Neues Konto ohne Trainingsdaten');return;
    }
    window.fitnessCloudApply(existing,id);
+   if(!existing.profile?.firstName&&user.user_metadata?.display_name)window.fitnessSetProfileName(user.user_metadata.display_name);
    ready=true;queueSave();
   }catch(e){
    // Auch wenn das Netz ausfällt, bleibt der lokale Kontostand nutzbar.
@@ -104,10 +106,11 @@
  window.addEventListener('pageshow',()=>{if(user&&ready)flush()});
  setInterval(()=>{if(user&&ready)flush()},30000);
  $('cloudSignUp').onclick=async()=>{
-  const email=$('cloudEmail').value.trim(),password=$('cloudPassword').value;
+  const email=$('cloudEmail').value.trim(),password=$('cloudPassword').value,name=$('registerDisplayName').value.trim();
+  if(!name)return message('Bitte einen Anzeigenamen eingeben.');
   if(!email||password.length<8)return message('E-Mail und Passwort mit mindestens 8 Zeichen eingeben.');
   message('Registrierung läuft …');
-  const {error}=await client.auth.signUp({email,password,options:{emailRedirectTo:location.origin+location.pathname}});
+  const {error}=await client.auth.signUp({email,password,options:{emailRedirectTo:location.origin+location.pathname,data:{display_name:name}}});
   message(error?'Fehler: '+error.message:'Registrierung gesendet. Bitte E-Mail bestätigen und anschließend anmelden.');
  };
  $('cloudLogin').onsubmit=async event=>{event.preventDefault();
@@ -118,6 +121,23 @@
   if(error)message('Anmeldung fehlgeschlagen: '+(error.message==='missing email or phone'?'Bitte E-Mail-Adresse erneut prüfen.':error.message));
   else await connect();
  };
+ $('accountEmailSave').onclick=async()=>{
+  if(!user)return;
+  const email=$('accountNewEmail').value.trim();
+  if(!email||!$('accountNewEmail').checkValidity())return message('Bitte eine gültige neue E-Mail-Adresse eingeben.');
+  if(email.toLowerCase()===user.email?.toLowerCase())return message('Diese E-Mail-Adresse ist bereits hinterlegt.');
+  message('E-Mail-Änderung wird angefordert …');
+  const {error}=await client.auth.updateUser({email},{emailRedirectTo:location.origin+location.pathname});
+  message(error?'E-Mail-Änderung fehlgeschlagen: '+error.message:'E-Mail-Änderung angefordert. Bitte Bestätigungs-E-Mails prüfen.');
+  if(!error)$('accountNewEmail').value='';
+ };
+ $('profileNameSave').addEventListener('click',async()=>{
+  if(!user)return;
+  const name=$('profileFirstName').value.trim();
+  if(!name)return message('Bitte einen Anzeigenamen eingeben.');
+  const {error}=await client.auth.updateUser({data:{display_name:name}});
+  if(error)message('Anzeigename lokal gespeichert, Kontoprofil nicht aktualisiert: '+error.message);
+ });
  $('cloudSignOut').onclick=async()=>{
   await client.auth.signOut();activeToken++;user=null;ready=false;window.fitnessCloudLocal();display();
   message('Von der Cloud abgemeldet. Lokale Trainingsdaten bleiben erhalten.');
