@@ -1,1 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><defs><radialGradient id="b"><stop stop-color="#0c55a4"/><stop offset="1" stop-color="#07132b"/></radialGradient></defs><rect width="512" height="512" rx="104" fill="url(#b)"/><text x="256" y="350" text-anchor="middle" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif" font-size="320">💪</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<rect width="512" height="512" rx="96" fill="#ffffff"/>
+<g text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="900">
+<text x="256" y="244" fill="#071c31" font-size="163" letter-spacing="-5" textLength="400" lengthAdjust="spacingAndGlyphs">ULLI</text>
+<text x="256" y="415" fill="#08b51e" font-size="192" font-style="italic" letter-spacing="-5" textLength="355" lengthAdjust="spacingAndGlyphs">FIT</text>
+</g></svg>
