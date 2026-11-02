@@ -17,19 +17,19 @@
  const hasPending=id=>localStorage.getItem(dirtyKey(id))==='1';
  function message(s){
   const lower=s.toLowerCase();
-  let state='busy',label='Wird synchronisiert …';
-  if(lower.includes('✓')||lower.includes('geladen')&&lower.includes('cloud')){state='ok';label='Synchronisiert'}
-  else if(lower.includes('fehler')||lower.includes('fehlgeschlagen')){state='error';label='Synchronisierung fehlgeschlagen'}
-  else if(lower.includes('offline')||lower.includes('nicht erreichbar')||lower.includes('warten')||lower.includes('nur lokal')){state='offline';label='Offline gespeichert'}
+  let state='busy',label='Daten werden abgeglichen …';
+  if(lower.includes('✓')||lower.includes('geladen')&&lower.includes('cloud')){state='ok';label='Alles aktuell'}
+  else if(lower.includes('fehler')||lower.includes('fehlgeschlagen')){state='error';label='Abgleich fehlgeschlagen'}
+  else if(lower.includes('offline')||lower.includes('nicht erreichbar')||lower.includes('warten')||lower.includes('nur lokal')){state='offline';label='Noch nicht synchronisiert'}
   else if(lower.includes('abgemeldet')){state='offline';label='Nicht angemeldet'}
   status.textContent=label;
   const indicator=$('syncIndicator'),symbol=$('syncSymbol'),last=$('syncLastTime'),loginStatus=$('loginSyncStatus');
   indicator.dataset.state=state;
-  symbol.textContent={ok:'☁✓',busy:'↻',offline:'☁',error:'⚠'}[state];
+  symbol.textContent={ok:'✓',busy:'↻',offline:'!',error:'!'}[state];
   if(user){
    const stamp=localStorage.getItem(lastSyncKey(user.id));
    if(stamp&&!Number.isNaN(Date.parse(stamp))){
-    last.textContent='Zuletzt synchronisiert: '+new Date(stamp).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    last.textContent='Letzter Abgleich: '+new Date(stamp).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
    }else last.textContent='';
   }else last.textContent='';
   loginStatus.textContent=s;
@@ -40,7 +40,7 @@
   $('loginSyncStatus').classList.toggle('hidden',!!user);
   if(user)account.textContent=user.email||'Angemeldet';
   window.fitnessAccountRefresh?.();
-  if(user){const stamp=localStorage.getItem(lastSyncKey(user.id));if(stamp)$('syncLastTime').textContent='Zuletzt synchronisiert: '+new Date(stamp).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}
+  if(user){const stamp=localStorage.getItem(lastSyncKey(user.id));if(stamp)$('syncLastTime').textContent='Letzter Abgleich: '+new Date(stamp).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}
  }
  function queueSave(){
   if(!user)return;
