@@ -15,11 +15,30 @@
  const lastSyncKey=id=>'fitness-cloud-last-sync-'+id;
  const localData=id=>{try{const d=JSON.parse(localStorage.getItem(localKey(id)));return d&&Array.isArray(d.history)&&Array.isArray(d.exercises)?d:null}catch{return null}};
  const hasPending=id=>localStorage.getItem(dirtyKey(id))==='1';
- function message(s){status.textContent=s}
+ function message(s){
+  const lower=s.toLowerCase();
+  let state='busy',label='Wird synchronisiert …';
+  if(lower.includes('✓')||lower.includes('geladen')&&lower.includes('cloud')){state='ok';label='Synchronisiert'}
+  else if(lower.includes('fehler')||lower.includes('fehlgeschlagen')){state='error';label='Synchronisierung fehlgeschlagen'}
+  else if(lower.includes('offline')||lower.includes('nicht erreichbar')||lower.includes('warten')||lower.includes('nur lokal')){state='offline';label='Offline gespeichert'}
+  else if(lower.includes('abgemeldet')){state='offline';label='Nicht angemeldet'}
+  status.textContent=label;
+  const indicator=$('syncIndicator'),symbol=$('syncSymbol'),last=$('syncLastTime'),loginStatus=$('loginSyncStatus');
+  indicator.dataset.state=state;
+  symbol.textContent={ok:'☁✓',busy:'↻',offline:'☁',error:'⚠'}[state];
+  if(user){
+   const stamp=localStorage.getItem(lastSyncKey(user.id));
+   if(stamp&&!Number.isNaN(Date.parse(stamp))){
+    last.textContent='Zuletzt synchronisiert: '+new Date(stamp).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+   }else last.textContent='';
+  }else last.textContent='';
+  loginStatus.textContent=s;
+ }
  function display(){
   $('cloudLogin').hidden=!!user;$('cloudLoggedIn').hidden=!user;
   if(user)account.textContent=user.email||'Angemeldet';
   window.fitnessAccountRefresh?.();
+  if(user){const stamp=localStorage.getItem(lastSyncKey(user.id));if(stamp)$('syncLastTime').textContent='Zuletzt synchronisiert: '+new Date(stamp).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}
  }
  function queueSave(){
   if(!user)return;
@@ -71,7 +90,7 @@
    if(row?.payload&&Array.isArray(row.payload.exercises)&&Array.isArray(row.payload.history)){
     window.fitnessCloudApply(row.payload,id);
     if(!row.payload.profile?.firstName&&user.user_metadata?.display_name)window.fitnessSetProfileName(user.user_metadata.display_name);
-    ready=true;message('Online gesichert ✓');return;
+    ready=true;localStorage.setItem(lastSyncKey(id),new Date().toISOString());message('Online gesichert ✓');return;
    }
    if(row?.payload)throw Error('Ungültige Cloud-Daten');
    const existing=cached||window.fitnessCloudExport();
