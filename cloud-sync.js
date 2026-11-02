@@ -33,9 +33,11 @@
    }else last.textContent='';
   }else last.textContent='';
   loginStatus.textContent=s;
+  loginStatus.classList.toggle('hidden',!!user);
  }
  function display(){
   $('cloudLogin').hidden=!!user;$('cloudLoggedIn').hidden=!user;
+  $('loginSyncStatus').classList.toggle('hidden',!!user);
   if(user)account.textContent=user.email||'Angemeldet';
   window.fitnessAccountRefresh?.();
   if(user){const stamp=localStorage.getItem(lastSyncKey(user.id));if(stamp)$('syncLastTime').textContent='Zuletzt synchronisiert: '+new Date(stamp).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}
