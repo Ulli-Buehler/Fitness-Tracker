@@ -17,10 +17,10 @@
  const hasPending=id=>localStorage.getItem(dirtyKey(id))==='1';
  function message(s){
   const lower=s.toLowerCase();
-  let state='busy',label='Daten werden abgeglichen …';
-  if(lower.includes('✓')||lower.includes('geladen')&&lower.includes('cloud')){state='ok';label='Alles aktuell'}
+  let state='busy',label='Synchronisation läuft …';
+  if(lower.includes('✓')||lower.includes('geladen')&&lower.includes('cloud')){state='ok';label='Synchronisation aktuell'}
   else if(lower.includes('fehler')||lower.includes('fehlgeschlagen')){state='error';label='Abgleich fehlgeschlagen'}
-  else if(lower.includes('offline')||lower.includes('nicht erreichbar')||lower.includes('warten')||lower.includes('nur lokal')){state='offline';label='Noch nicht synchronisiert'}
+  else if(lower.includes('offline')||lower.includes('nicht erreichbar')||lower.includes('warten')||lower.includes('nur lokal')){state='offline';label='Synchronisation ausstehend'}
   else if(lower.includes('abgemeldet')){state='offline';label='Nicht angemeldet'}
   status.textContent=label;
   const indicator=$('syncIndicator'),symbol=$('syncSymbol'),last=$('syncLastTime'),loginStatus=$('loginSyncStatus');
