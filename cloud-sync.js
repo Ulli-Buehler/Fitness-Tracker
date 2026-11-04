@@ -95,14 +95,9 @@
     ready=true;localStorage.setItem(lastSyncKey(id),new Date().toISOString());message('Online gesichert ✓');return;
    }
    if(row?.payload)throw Error('Ungültige Cloud-Daten');
-   const existing=cached||window.fitnessCloudExport();
-   const transfer=confirm('Dieses Konto hat noch keine Online-Daten. Die aktuellen Trainingsdaten jetzt übernehmen?');
-   if(!transfer){
-    window.fitnessCloudApply({exercises:[],history:[],session:null,historyLimit:5},id);
-    ready=true;message('Neues Konto ohne Trainingsdaten');return;
-   }
+   // Ein neues Konto übernimmt niemals Daten eines anderen Kontos oder des Gastmodus.
+   const existing=cached||{exercises:[],history:[],session:null,historyLimit:5,profile:{firstName:user.user_metadata?.display_name||''}};
    window.fitnessCloudApply(existing,id);
-   if(!existing.profile?.firstName&&user.user_metadata?.display_name)window.fitnessSetProfileName(user.user_metadata.display_name);
    ready=true;queueSave();
   }catch(e){
    // Auch wenn das Netz ausfällt, bleibt der lokale Kontostand nutzbar.
@@ -117,9 +112,9 @@
   const next=session?.user||null;
   if(next?.id!==user?.id){
    activeToken++;clearTimeout(retryTimer);
-   user=next;ready=false;display();
+   user=next;ready=false;window.fitnessCloudLoading?.();display();
    if(user)await hydrate();
-   else{window.fitnessCloudLocal();message('Nur lokal gespeichert')}
+   else{window.fitnessCloudLoading?.();message('Nicht angemeldet')}
   }else if(user&&ready&&hasPending(user.id))flush();
  }
  window.addEventListener('online',()=>{if(user){if(!ready)hydrate();else flush()}});
@@ -160,9 +155,9 @@
   if(error)message('Anzeigename lokal gespeichert, Kontoprofil nicht aktualisiert: '+error.message);
  });
  $('cloudSignOut').onclick=async()=>{
-  await client.auth.signOut();activeToken++;user=null;ready=false;window.fitnessCloudLocal();display();
+  await client.auth.signOut();activeToken++;user=null;ready=false;window.fitnessCloudLoading?.();display();
   message('Von der Cloud abgemeldet. Lokale Trainingsdaten bleiben erhalten.');
  };
  client.auth.onAuthStateChange(()=>{setTimeout(()=>connect().catch(e=>message(e.message)),0)});
- display();connect().catch(e=>message('Cloud-Fehler: '+e.message));
+ window.fitnessCloudLoading?.();display();connect().catch(e=>message('Cloud-Fehler: '+e.message));
 })();
